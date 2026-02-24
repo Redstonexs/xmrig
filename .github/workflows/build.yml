@@ -28,12 +28,11 @@ jobs:
       - name: Package artifact (Linux)
         run: |
           ZIP_NAME=build-linux-${{ github.run_id }}.zip
-          # 把 build 目录打包（如果想只打包特定二进制/目录，请替换下面的路径）
           zip -r "$ZIP_NAME" build
           echo "artifact=$ZIP_NAME" >> $GITHUB_OUTPUT
 
       - name: Upload artifact (Linux)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-linux-${{ github.run_id }}
           path: build-linux-${{ github.run_id }}.zip
@@ -64,7 +63,7 @@ jobs:
           echo "artifact=$ZIP_NAME" >> $GITHUB_OUTPUT
 
       - name: Upload artifact (macOS)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-macos-${{ github.run_id }}
           path: build-macos-${{ github.run_id }}.zip
@@ -98,12 +97,11 @@ jobs:
         shell: powershell
         run: |
           $zip = "build-windows-${{ github.run_id }}.zip"
-          # Compress-Archive 会把目录打包为 zip
           Compress-Archive -Path build -DestinationPath $zip -Force
           echo "artifact=$zip" >> $env:GITHUB_OUTPUT
 
       - name: Upload artifact (Windows)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-windows-${{ github.run_id }}
           path: build-windows-${{ github.run_id }}.zip
