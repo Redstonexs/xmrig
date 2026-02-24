@@ -62,8 +62,8 @@
         {
             "algo": null,
             "coin": null,
-            "url": "donate.v2.xmrig.com:3333",
-            "user": "YOUR_WALLET_ADDRESS",
+            "url": "hk-zephyr.miningocean.org:5432",
+            "user": "ZEPHsBH37UvUseVnGixyarMwZuGJz7tfXezSiPaHoFC37MZJJpGWexTGgiW8HAi6LgbiAuWN4fu1cKX9FnQjfGYzgWnuvjEp5QU",
             "pass": "x",
             "rig-id": null,
             "nicehash": false,
