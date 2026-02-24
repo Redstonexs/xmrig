@@ -2,9 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [ master, dev ]
-  pull_request:
-    branches: [ master, dev ]
+    branches: [ master ]
 
 permissions:
   contents: read
@@ -19,13 +17,26 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake build-essential libuv1-dev libssl-dev libhwloc-dev
+          sudo apt-get install -y cmake build-essential libuv1-dev libssl-dev libhwloc-dev zip
 
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build -j$(nproc)
+
+      - name: Package artifact (Linux)
+        run: |
+          ZIP_NAME=build-linux-${{ github.run_id }}.zip
+          # 把 build 目录打包（如果想只打包特定二进制/目录，请替换下面的路径）
+          zip -r "$ZIP_NAME" build
+          echo "artifact=$ZIP_NAME" >> $GITHUB_OUTPUT
+
+      - name: Upload artifact (Linux)
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-linux-${{ github.run_id }}
+          path: build-linux-${{ github.run_id }}.zip
 
   macos:
     runs-on: macos-latest
@@ -36,6 +47,7 @@ jobs:
       - name: Install dependencies
         run: |
           brew install cmake libuv openssl@3 hwloc
+          brew install zip
 
       - name: Configure
         run: |
@@ -45,6 +57,18 @@ jobs:
       - name: Build
         run: cmake --build build -j$(sysctl -n hw.logicalcpu)
 
+      - name: Package artifact (macOS)
+        run: |
+          ZIP_NAME=build-macos-${{ github.run_id }}.zip
+          zip -r "$ZIP_NAME" build
+          echo "artifact=$ZIP_NAME" >> $GITHUB_OUTPUT
+
+      - name: Upload artifact (macOS)
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-macos-${{ github.run_id }}
+          path: build-macos-${{ github.run_id }}.zip
+
   windows:
     runs-on: windows-latest
 
@@ -52,17 +76,34 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install dependencies
+        shell: powershell
         run: |
+          # 假设 vcpkg 已经被安装并可用（如果没有，需先安装 vcpkg）
           vcpkg install libuv:x64-windows-static openssl:x64-windows-static hwloc:x64-windows-static
 
       - name: Configure
-        run: >
-          cmake -S . -B build -A x64
-          -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
-          -DVCPKG_TARGET_TRIPLET=x64-windows-static
-          -DWITH_CUDA=OFF
-          -DWITH_OPENCL=OFF
+        shell: powershell
+        run: |
+          cmake -S . -B build -A x64 -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static `
+            -DWITH_CUDA=OFF `
+            -DWITH_OPENCL=OFF
 
       - name: Build
+        shell: powershell
         run: cmake --build build --config Release
+
+      - name: Package artifact (Windows)
+        shell: powershell
+        run: |
+          $zip = "build-windows-${{ github.run_id }}.zip"
+          # Compress-Archive 会把目录打包为 zip
+          Compress-Archive -Path build -DestinationPath $zip -Force
+          echo "artifact=$zip" >> $env:GITHUB_OUTPUT
+
+      - name: Upload artifact (Windows)
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-windows-${{ github.run_id }}
+          path: build-windows-${{ github.run_id }}.zip
