@@ -133,12 +133,30 @@ jobs:
           curl -L -o "%ARCHIVE%" "https://github.com/openssl/openssl/releases/download/openssl-%OPENSSL_VERSION%/openssl-%OPENSSL_VERSION%.tar.gz"
           tar -xzf "%ARCHIVE%" -C "%RUNNER_TEMP%"
 
+          for /f "usebackq tokens=*" %%i in (`where perl`) do if not defined PERL_EXE set "PERL_EXE=%%i"
+          if not defined PERL_EXE exit /b 1
+          for %%i in ("%PERL_EXE%") do set "PERL_DIR=%%~dpi"
+
           for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set "VSINSTALL=%%i"
           call "%VSINSTALL%\VC\Auxiliary\Build\vcvars64.bat"
 
+          set "__VSCMD_PREINIT_PATH="
+          set "__VSCMD_PREINIT_INCLUDE="
+          set "__VSCMD_PREINIT_LIB="
+          set "__VSCMD_PREINIT_LIBPATH="
+          set "PATH=%PERL_DIR%;%VCToolsInstallDir%bin\Hostx64\x64;%WindowsSdkDir%bin\%WindowsSDKVersion%x64;%WindowsSdkDir%bin\%WindowsSDKVersion%x86;%SystemRoot%\System32;%SystemRoot%;%SystemRoot%\System32\Wbem"
+
+          for /f "tokens=1 delims==" %%v in ('set GITHUB_ 2^>nul') do set "%%v="
+          for /f "tokens=1 delims==" %%v in ('set RUNNER_ 2^>nul') do set "%%v="
+          for /f "tokens=1 delims==" %%v in ('set ACTIONS_ 2^>nul') do set "%%v="
+          for /f "tokens=1 delims==" %%v in ('set AGENT_ 2^>nul') do set "%%v="
+          for /f "tokens=1 delims==" %%v in ('set VCPKG_ 2^>nul') do set "%%v="
+          for /f "tokens=1 delims==" %%v in ('set JAVA_HOME 2^>nul') do set "%%v="
+          for /f "tokens=1 delims==" %%v in ('set Image 2^>nul') do set "%%v="
+
           cd /d "%SOURCE%"
           perl Configure VC-WIN64A no-shared no-asm no-tests no-zlib no-comp no-dgram no-cms --prefix="%DEPS%" --openssldir="%DEPS%\ssl" -D_WIN32_WINNT=0x0601 -DWINVER=0x0601
-          nmake /S
+          nmake /S build_sw
           nmake /S install_sw
 
       - name: Configure
