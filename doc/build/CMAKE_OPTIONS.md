@@ -36,6 +36,7 @@ This feature add external dependency to libhwloc (1.10.0+) (except MSVC builds).
 * **`-DARM_TARGET=<number>`** override ARM target, possible values `7` (ARMv7) and `8` (ARMv8).
 * **`-DUV_INCLUDE_DIR=<path>`** custom path to libuv headers.
 * **`-DUV_LIBRARY=<path>`** custom path to libuv library.
+* **`-DWITH_WIN7_COMPAT=ON`** build Windows binaries for Windows 7 SP1; requires libuv 1.44.2 or older.
 * **`-DHWLOC_INCLUDE_DIR=<path>`** custom path to hwloc headers.
 * **`-DHWLOC_LIBRARY=<path>`** custom path to hwloc library.
 * **`-DOPENSSL_ROOT_DIR=<path>`** custom path to OpenSSL.

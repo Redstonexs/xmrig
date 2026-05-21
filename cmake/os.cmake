@@ -26,6 +26,10 @@ endif()
 
 if (XMRIG_OS_WIN)
     add_definitions(-DWIN32 -DXMRIG_OS_WIN)
+
+    if (WITH_WIN7_COMPAT)
+        add_definitions(-DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -DNTDDI_VERSION=0x06010100)
+    endif()
 elseif(XMRIG_OS_APPLE)
     add_definitions(-DXMRIG_OS_APPLE)
 

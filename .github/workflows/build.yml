@@ -2,7 +2,12 @@ name: Build
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, main ]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  BUILD_TYPE: Release
 
 permissions:
   contents: read
@@ -71,37 +76,105 @@ jobs:
   windows:
     runs-on: windows-latest
 
+    env:
+      LIBUV_VERSION: 1.44.2
+      OPENSSL_VERSION: 3.0.16
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Build libuv for Windows 7
         shell: powershell
         run: |
-          # 假设 vcpkg 已经被安装并可用（如果没有，需先安装 vcpkg）
-          vcpkg install libuv:x64-windows-static openssl:x64-windows-static hwloc:x64-windows-static
+          $deps = "$env:GITHUB_WORKSPACE\deps-win7"
+          $archive = "$env:RUNNER_TEMP\libuv-$env:LIBUV_VERSION.tar.gz"
+          $source = "$env:RUNNER_TEMP\libuv-v$env:LIBUV_VERSION"
+          $build = "$env:RUNNER_TEMP\libuv-build"
+
+          New-Item -ItemType Directory -Force "$deps\include", "$deps\lib" | Out-Null
+          Invoke-WebRequest "https://dist.libuv.org/dist/v$env:LIBUV_VERSION/libuv-v$env:LIBUV_VERSION.tar.gz" -OutFile $archive
+          tar -xzf $archive -C $env:RUNNER_TEMP
+
+          cmake -S $source -B $build -A x64 `
+            -DBUILD_TESTING=OFF `
+            -DLIBUV_BUILD_TESTS=OFF `
+            -DLIBUV_BUILD_SHARED=OFF `
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+
+          cmake --build $build --config Release --target uv_a
+
+          Copy-Item -Recurse "$source\include\*" "$deps\include\" -Force
+          $lib = Get-ChildItem -Path $build -Recurse -File -Include uv_a.lib,libuv_a.lib,uv.lib,libuv.lib |
+            Where-Object { $_.FullName -like "*Release*" } |
+            Select-Object -First 1
+
+          if (-not $lib) {
+            throw "libuv static library was not generated"
+          }
+
+          Copy-Item $lib.FullName "$deps\lib\uv.lib" -Force
+
+      - name: Ensure OpenSSL build tools
+        shell: powershell
+        run: |
+          if (-not (Get-Command perl -ErrorAction SilentlyContinue)) {
+            choco install strawberryperl -y --no-progress
+            "C:\Strawberry\perl\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+            "C:\Strawberry\c\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+          }
+
+      - name: Build OpenSSL for Windows 7
+        shell: cmd
+        run: |
+          set "DEPS=%GITHUB_WORKSPACE%\deps-win7"
+          set "ARCHIVE=%RUNNER_TEMP%\openssl-%OPENSSL_VERSION%.tar.gz"
+          set "SOURCE=%RUNNER_TEMP%\openssl-%OPENSSL_VERSION%"
+
+          curl -L -o "%ARCHIVE%" "https://github.com/openssl/openssl/releases/download/openssl-%OPENSSL_VERSION%/openssl-%OPENSSL_VERSION%.tar.gz"
+          tar -xzf "%ARCHIVE%" -C "%RUNNER_TEMP%"
+
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath`) do set "VSINSTALL=%%i"
+          call "%VSINSTALL%\VC\Auxiliary\Build\vcvars64.bat"
+
+          cd /d "%SOURCE%"
+          perl Configure VC-WIN64A no-shared no-asm no-tests no-zlib no-comp no-dgram no-cms --prefix="%DEPS%" --openssldir="%DEPS%\ssl" -D_WIN32_WINNT=0x0601 -DWINVER=0x0601
+          nmake /S
+          nmake /S install_sw
 
       - name: Configure
         shell: powershell
         run: |
-          cmake -S . -B build -A x64 -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows-static `
+          cmake -S . -B build -A x64 -DCMAKE_BUILD_TYPE=$env:BUILD_TYPE `
+            -DWITH_WIN7_COMPAT=ON `
+            -DWITH_TLS=ON `
             -DWITH_CUDA=OFF `
-            -DWITH_OPENCL=OFF
+            -DWITH_OPENCL=OFF `
+            -DXMRIG_DEPS="$env:GITHUB_WORKSPACE\deps-win7" `
+            -DOPENSSL_ROOT_DIR="$env:GITHUB_WORKSPACE\deps-win7" `
+            -DUV_INCLUDE_DIR="$env:GITHUB_WORKSPACE\deps-win7\include" `
+            -DUV_LIBRARY="$env:GITHUB_WORKSPACE\deps-win7\lib\uv.lib" `
+            -DCMAKE_EXE_LINKER_FLAGS="/DEFAULTLIB:advapi32.lib /DEFAULTLIB:user32.lib /DEFAULTLIB:shell32.lib /DEFAULTLIB:ole32.lib /DEFAULTLIB:bcrypt.lib"
 
       - name: Build
         shell: powershell
-        run: cmake --build build --config Release
+        run: cmake --build build --config $env:BUILD_TYPE
 
       - name: Package artifact (Windows)
         shell: powershell
         run: |
-          $zip = "build-windows-${{ github.run_id }}.zip"
-          Compress-Archive -Path build -DestinationPath $zip -Force
+          $dist = "dist\windows7-x64"
+          New-Item -ItemType Directory -Force $dist | Out-Null
+          Copy-Item "build\$env:BUILD_TYPE\*.exe" $dist -Force
+          Copy-Item "build\$env:BUILD_TYPE\*.cmd" $dist -Force -ErrorAction SilentlyContinue
+          Copy-Item "build\$env:BUILD_TYPE\WinRing0x64.sys" $dist -Force -ErrorAction SilentlyContinue
+
+          $zip = "xmrig-windows7-x64-tls-${{ github.run_id }}.zip"
+          Compress-Archive -Path "$dist\*" -DestinationPath $zip -Force
           echo "artifact=$zip" >> $env:GITHUB_OUTPUT
 
       - name: Upload artifact (Windows)
         uses: actions/upload-artifact@v4
         with:
-          name: build-windows-${{ github.run_id }}
-          path: build-windows-${{ github.run_id }}.zip
+          name: xmrig-windows7-x64-tls-${{ github.run_id }}
+          path: xmrig-windows7-x64-tls-${{ github.run_id }}.zip
+          retention-days: 14
