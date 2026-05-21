@@ -34,7 +34,7 @@ Run the offline CPU hash suite without pool, API, or miner network dependencies:
 The script builds the standalone hash-test binary and runs both the regular known-answer suite and the full RandomX mode checks.
 
 ## Donations
-* Default donation 1% (1 minute in 100 minutes) can be increased via option `donate-level` or disabled in source code.
+* Default donation is 0% and can be changed via option `donate-level`.
 * XMR: `48edfHu7V9Z84YzzMa6fUueoELZ9ZRXq9VetWzYGzKt52XU5xvqgzYnDK9URnRoJMk1j8nLwEVsaSWJ4fhdUyZijBGUicoD`
 
 ## Developers
