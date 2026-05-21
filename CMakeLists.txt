@@ -263,7 +263,7 @@ add_executable(${CMAKE_PROJECT_NAME} ${HEADERS} ${SOURCES} ${SOURCES_OS} ${HEADE
 if (WITH_OPENCL)
     add_dependencies(${CMAKE_PROJECT_NAME} generate-opencl-sources)
 endif()
-target_link_libraries(${CMAKE_PROJECT_NAME} ${XMRIG_ASM_LIBRARY} ${OPENSSL_LIBRARIES} ${UV_LIBRARIES} ${EXTRA_LIBS} ${CPUID_LIB} ${ARGON2_LIBRARY} ${ETHASH_LIBRARY} ${GHOSTRIDER_LIBRARY})
+target_link_libraries(${CMAKE_PROJECT_NAME} ${XMRIG_ASM_LIBRARY} ${OPENSSL_LIBRARIES} ${UV_LIBRARIES} ${EXTRA_LIBS} ${ARGON2_LIBRARY} ${ETHASH_LIBRARY} ${GHOSTRIDER_LIBRARY} ${CPUID_LIB})
 
 add_custom_target(check-hashes
     COMMAND node ${CMAKE_SOURCE_DIR}/run_tests.js --safe --build-dir ${CMAKE_BINARY_DIR}

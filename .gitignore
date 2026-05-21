@@ -1,6 +1,18 @@
-/build
+# Local build outputs
+/build*/
+/dist/
+/package/
+
+# Local dependency bundles
+/deps/
+/xmrig-deps/
 scripts/build
 scripts/deps
+
+# Packaged artifacts
+*.zip
+*.tar.gz
+
 /CMakeLists.txt.user
 /.idea
 /src/backend/opencl/cl/cn/cryptonight_gen.cl
