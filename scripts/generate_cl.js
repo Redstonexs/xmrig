@@ -75,6 +75,17 @@ function kawpow()
     fs.writeFileSync('kawpow_dag_cl.h', text2h(kawpow_dag, 'xmrig', 'kawpow_dag_cl'));
 }
 
+
+// MoneroOcean: regenerate the fork-only CN-GPU embedded OpenCL header.
+function cn_gpu()
+{
+    const cn_gpu = opencl_minify(addIncludes('cryptonight_gpu.cl', [ 'wolf-aes.cl', 'keccak.cl' ]));
+
+    // fs.writeFileSync('cryptonight_gpu_gen.cl', cn_gpu);
+    fs.writeFileSync('cryptonight_gpu_cl.h', text2h(cn_gpu, 'xmrig', 'cryptonight_gpu_cl'));
+}
+// End MoneroOcean
+
 for (let i = 0; i < 2; i++) {
     if (fs.existsSync('src/backend/opencl/cl/OclSource.h')) {
         break;
@@ -90,6 +101,9 @@ const cwd = process.cwd();
 process.chdir(path.resolve(cwd, 'cn'));
 cn();
 cn_r();
+// MoneroOcean: keep CN-GPU in the normal OpenCL regeneration path.
+cn_gpu();
+// End MoneroOcean
 
 process.chdir(path.resolve(cwd, 'rx'));
 rx();
